@@ -2,6 +2,37 @@
 
 Reusable Odoo 16 addon for **commercially equivalent/substitute products**.
 
+## Português (Brasil) — Produtos equivalentes
+
+O **Product Equivalents** é um módulo para **Odoo 16** que permite organizar produtos comercialmente equivalentes, similares ou substitutos em grupos. Foi pensado para reutilização por empresas de diferentes segmentos em todo o Brasil, sem regras específicas de uma marca, cliente ou operação fiscal.
+
+### Como funciona na venda
+
+Ao pesquisar um produto no campo de produto de uma linha do pedido de venda, o Odoo mantém sua busca padrão. Se um dos produtos encontrados pertencer a um grupo de equivalência, os demais produtos desse grupo também poderão aparecer como opções.
+
+Por exemplo, um grupo `FILTRO-001` pode reunir três produtos de referências diferentes: `AAA-001`, `BBB-001` e `CCC-001`. Ao pesquisar `AAA-001`, o vendedor poderá encontrar o produto original e as alternativas cadastradas no mesmo grupo, escolhendo apenas um deles para a linha do pedido.
+
+Nenhum produto equivalente é adicionado automaticamente ao pedido. O módulo oferece alternativas de substituição; a escolha continua com o vendedor.
+
+### Organização dos grupos
+
+- Os grupos são cadastrados manualmente e vinculados aos produtos pelo formulário de produto.
+- Cada modelo de produto pode pertencer a nenhum ou a um único grupo de equivalência.
+- A equivalência é definida no nível do modelo de produto (`product.template`); suas variantes são consideradas candidatas na busca.
+- A empresa é responsável por validar quais produtos podem ser considerados substitutos para sua aplicação. O cadastro no grupo não certifica compatibilidade técnica.
+
+### Comportamento e escopo da primeira versão
+
+Os resultados da busca padrão aparecem primeiro. Os equivalentes são acrescentados quando há espaço no limite de resultados, respeitando os filtros recebidos pela busca, como produtos disponíveis para venda e restrições de empresa.
+
+Esta versão contempla grupos de equivalência e sua integração com a busca de produtos. Recursos como comparação de preços e estoque, ordenação por disponibilidade, importação de referências cruzadas e sugestões por inteligência artificial não fazem parte do escopo inicial.
+
+### Instalação e situação do projeto
+
+O nome técnico do módulo é `product_equivalent`. Para instalá-lo, coloque a pasta do módulo em um diretório de addons do Odoo 16, atualize a lista de aplicativos e instale **Product Equivalents**. Os exemplos de comandos estão na seção **Installation**, abaixo.
+
+O projeto está em desenvolvimento e auditoria técnica. A instalação e os testes em uma base Odoo 16 de homologação devem ser concluídos antes do uso em produção.
+
 ## Business objective
 
 When a salesperson searches for Product A in a Sales Order, Odoo should continue to return the normal match and may also return other products assigned to the same equivalence group. This is not an upsell/cross-sell feature: the salesperson chooses one product according to brand, price, availability, or commercial criteria.
