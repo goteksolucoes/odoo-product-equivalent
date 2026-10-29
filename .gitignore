@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.log
+odoo.conf
+odoo.local.conf
+
+# Agent workspace and editors
+.maestri/
+.idea/
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db
+Desktop.ini

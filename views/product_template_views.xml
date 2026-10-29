@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Verify inherited view id against the target Odoo 16 build before installation. -->
+    <record id="product_template_form_view_equivalent" model="ir.ui.view">
+        <field name="name">product.template.form.equivalent</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='sales']" position="inside">
+                <group string="Equivalent Products">
+                    <field name="equivalent_group_id" options="{'no_create_edit': False}"/>
+                    <field name="equivalent_product_tmpl_ids"
+                           widget="many2many_tags"
+                           readonly="1"
+                           attrs="{'invisible': [('equivalent_group_id', '=', False)]}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
