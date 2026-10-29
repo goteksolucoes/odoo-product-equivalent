@@ -91,8 +91,7 @@ class ProductProduct(models.Model):
         native_ids = [product_id for product_id, _ in native_pairs]
 
         if name and positive_search and native_ids:
-            ranking_model = self.with_user(name_get_uid) if name_get_uid else self
-            native_data = ranking_model.browse(native_ids).read(["default_code", "name"])
+            native_data = self.browse(native_ids).read(["default_code", "name"])
             relevance = {
                 row["id"]: _search_relevance(row, name)
                 for row in native_data
@@ -150,8 +149,7 @@ class ProductProduct(models.Model):
             )
         )
         if equivalent_ids:
-            ranking_model = self.with_user(name_get_uid) if name_get_uid else self
-            equivalent_data = ranking_model.browse(equivalent_ids).read(
+            equivalent_data = self.browse(equivalent_ids).read(
                 ["default_code", "name"]
             )
             relevance = {

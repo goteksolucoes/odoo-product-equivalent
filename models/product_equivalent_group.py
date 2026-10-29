@@ -1,4 +1,4 @@
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -38,7 +38,7 @@ class ProductEquivalentGroup(models.Model):
                 ("company_id", "!=", group.company_id.id),
             ], limit=1)
             if has_incompatible_member:
-                raise ValidationError(_(
+                raise ValidationError(self.env._(
                     "The group's company must match every member product's company. "
                     "Use a shared group for products from different companies."
                 ))

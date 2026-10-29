@@ -1,4 +1,4 @@
-from odoo import _, api, Command, SUPERUSER_ID
+from odoo import api, Command, SUPERUSER_ID
 from odoo.exceptions import UserError
 
 
@@ -11,7 +11,7 @@ def _active_group_pairs(env):
             ("equivalent_group_id", "=", group.id),
         ])
         if len(members) > 2:
-            raise UserError(_(
+            raise UserError(env._(
                 "Cannot migrate active equivalence group '%(group)s' (ID %(id)s): "
                 "it has %(count)s members.",
                 group=group.display_name,
@@ -21,7 +21,7 @@ def _active_group_pairs(env):
         if len(members) == 2:
             company_ids = {company_id for company_id in members.mapped("company_id").ids}
             if len(company_ids) > 1:
-                raise UserError(_(
+                raise UserError(env._(
                     "Cannot migrate active equivalence group '%(group)s' (ID %(id)s): "
                     "its two products belong to different specific companies.",
                     group=group.display_name,
