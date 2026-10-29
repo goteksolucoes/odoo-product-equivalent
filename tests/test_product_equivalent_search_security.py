@@ -111,7 +111,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
             "product.template",
             [("id", "!=", target.id)],
             "mutation_target",
-            groups="sales_team.group_sale_manager,product.group_product_manager",
+            groups="sales_team.group_sale_manager",
         )
 
         with self.assertRaises(AccessError), self.env.cr.savepoint():
@@ -138,7 +138,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
             "product.template",
             [("id", "!=", target.id)],
             "hidden_existing_edge",
-            groups="sales_team.group_sale_manager,product.group_product_manager",
+            groups="sales_team.group_sale_manager",
         )
 
         source.with_user(user).write({
@@ -166,7 +166,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
             "product.template",
             [("id", "!=", target.id)],
             "unlink_target",
-            groups="sales_team.group_sale_manager,product.group_product_manager",
+            groups="sales_team.group_sale_manager",
             rule_permissions={
                 "perm_read": False,
                 "perm_write": True,
