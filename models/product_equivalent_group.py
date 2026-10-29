@@ -1,4 +1,5 @@
-from odoo import fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ProductEquivalentGroup(models.Model):
@@ -20,3 +21,24 @@ class ProductEquivalentGroup(models.Model):
         string="Equivalent Products",
     )
     note = fields.Text()
+
+    @api.constrains("company_id", "product_tmpl_ids")
+    def _check_member_companies(self):
+        # This elevated existence check is limited to relational integrity. It
+        # must include archived members and members hidden by record rules, but
+        # it never returns their IDs or names to the caller.
+        ProductTemplate = self.env["product.template"].sudo().with_context(
+            active_test=False
+        )
+        for group in self.filtered("company_id"):
+            has_incompatible_member = ProductTemplate.search_count([
+                ("equivalent_group_id", "=", group.id),
+                "|",
+                ("company_id", "=", False),
+                ("company_id", "!=", group.company_id.id),
+            ], limit=1)
+            if has_incompatible_member:
+                raise ValidationError(_(
+                    "The group's company must match every member product's company. "
+                    "Use a shared group for products from different companies."
+                ))

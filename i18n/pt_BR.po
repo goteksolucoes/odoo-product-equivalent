@@ -1,0 +1,21 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0\n"
+"Language: pt_BR\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: model:ir.ui.view,arch_db:product_equivalent.product_template_form_view_equivalent
+#: model:ir.model.fields,field_description:product_equivalent.field_product_template__direct_equivalent_product_tmpl_ids
+#. module: product_equivalent
+msgid "Equivalent Products"
+msgstr "Produtos Equivalentes"
+
+#. module: product_equivalent
+#: model:ir.module.module,shortdesc:base.module_product_equivalent
+msgid "Product Equivalents"
+msgstr "Produtos Equivalentes"

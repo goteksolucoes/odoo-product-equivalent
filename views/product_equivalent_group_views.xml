@@ -4,7 +4,7 @@
         <field name="name">product.equivalent.group.tree</field>
         <field name="model">product.equivalent.group</field>
         <field name="arch" type="xml">
-            <tree string="Equivalent Product Groups">
+            <tree string="Equivalent Product Groups" create="0" edit="0" delete="0">
                 <field name="name"/>
                 <field name="company_id" groups="base.group_multi_company"/>
                 <field name="product_tmpl_ids"/>
@@ -17,7 +17,7 @@
         <field name="name">product.equivalent.group.form</field>
         <field name="model">product.equivalent.group</field>
         <field name="arch" type="xml">
-            <form string="Equivalent Product Group">
+            <form string="Equivalent Product Group" create="0" edit="0" delete="0">
                 <sheet>
                     <group>
                         <field name="name"/>
@@ -55,5 +55,6 @@
               parent="sale.prod_config_main"
               action="product_equivalent_group_action"
               sequence="90"
-              groups="product.group_product_manager"/>
+              groups="sales_team.group_sale_manager"
+              active="False"/>
 </odoo>
