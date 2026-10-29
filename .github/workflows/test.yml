@@ -34,9 +34,14 @@ jobs:
           - 5432:5432
     env:
       OCA_ENABLE_CHECKLOG_ODOO: "1"
+      ADDONS_DIR: ..
+    defaults:
+      run:
+        working-directory: addons/product_equivalent
     steps:
       - uses: actions/checkout@v4
         with:
+          path: addons/product_equivalent
           persist-credentials: false
       - name: Install addons and dependencies
         run: oca_install_addons
