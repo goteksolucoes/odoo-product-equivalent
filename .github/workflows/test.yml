@@ -1,0 +1,52 @@
+﻿name: tests
+
+on:
+  pull_request:
+    branches:
+      - "17.0*"
+  push:
+    branches:
+      - "17.0"
+      - "17.0-ocabot-*"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    container: ${{ matrix.container }}
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: ghcr.io/oca/oca-ci/py3.10-odoo17.0:latest
+            name: test with Odoo
+          - container: ghcr.io/oca/oca-ci/py3.10-ocb17.0:latest
+            name: test with OCB
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: odoo
+        ports:
+          - 5432:5432
+    env:
+      OCA_ENABLE_CHECKLOG_ODOO: "1"
+      ADDONS_DIR: ..
+    defaults:
+      run:
+        working-directory: addons/product_equivalent
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: addons/product_equivalent
+          persist-credentials: false
+      - name: Install addons and dependencies
+        run: oca_install_addons
+      - name: Initialize test database
+        run: oca_init_test_database
+      - name: Run addon tests
+        run: oca_run_tests
+

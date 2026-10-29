@@ -183,7 +183,7 @@ class TestDirectEquivalentRelation(TransactionCase):
 
         deleted_id = self.template_a.id
         self.template_a.unlink()
-        self.template_b.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        self.template_b.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
 
         self.assertNotIn(deleted_id, self._ids(self.template_b))
 

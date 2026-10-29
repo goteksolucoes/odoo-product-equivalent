@@ -14,7 +14,7 @@ class TestDirectEquivalentMigration(TransactionCase):
         migration_path = os.path.join(
             get_module_path("product_equivalent"),
             "migrations",
-            "16.0.2.0.0",
+            "17.0.2.0.0",
         )
         cls.post_migration = load_script(
             os.path.join(migration_path, "post-migration.py"),
@@ -44,21 +44,21 @@ class TestDirectEquivalentMigration(TransactionCase):
         )
         first, second = members
 
-        self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
-        self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
-        group.invalidate_cache(["active"])
-        members.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
+        self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
+        group.invalidate_recordset(["active"])
+        members.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
 
         self.assertEqual(first.direct_equivalent_product_tmpl_ids, second)
         self.assertEqual(second.direct_equivalent_product_tmpl_ids, first)
         self.assertEqual(first.equivalent_group_id, group)
         self.assertEqual(second.equivalent_group_id, group)
-        group.invalidate_cache(["active"])
+        group.invalidate_recordset(["active"])
         self.assertFalse(group.active)
 
         first.write({"direct_equivalent_product_tmpl_ids": [Command.unlink(second.id)]})
-        self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
-        members.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
+        members.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
         self.assertFalse(first.direct_equivalent_product_tmpl_ids)
         self.assertFalse(second.direct_equivalent_product_tmpl_ids)
 
@@ -69,7 +69,7 @@ class TestDirectEquivalentMigration(TransactionCase):
             active=False,
         )
 
-        self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
+        self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
 
         self.assertFalse(members.mapped("direct_equivalent_product_tmpl_ids"))
         self.assertEqual(members.mapped("equivalent_group_id"), group)
@@ -82,9 +82,9 @@ class TestDirectEquivalentMigration(TransactionCase):
         live, archived = members
         archived.active = False
 
-        self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
-        group.invalidate_cache(["active"])
-        members.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
+        group.invalidate_recordset(["active"])
+        members.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
 
         self.assertFalse(group.active)
         self.assertFalse(archived.active)
@@ -108,7 +108,7 @@ class TestDirectEquivalentMigration(TransactionCase):
         )
 
         with self.assertRaises(UserError) as caught:
-            self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
+            self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
 
         self.assertIn(group.name, str(caught.exception))
 
@@ -123,7 +123,7 @@ class TestDirectEquivalentMigration(TransactionCase):
         )
 
         with self.assertRaises(UserError) as caught:
-            self.post_migration.migrate(self.env.cr, "16.0.1.0.0")
+            self.post_migration.migrate(self.env.cr, "17.0.1.0.0")
 
         self.assertIn(group.name, str(caught.exception))
 
