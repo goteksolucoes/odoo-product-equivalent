@@ -1,7 +1,7 @@
 {
     "name": "Product Equivalents",
     "summary": "Commercially equivalent products in product search and sales orders",
-    "version": "16.0.2.0.0",
+    "version": "19.0.2.0.0",
     "category": "Products",
     "author": "GT CONSULTORIA E TECNOLOGIA",
     "website": "https://gotek.tec.br",

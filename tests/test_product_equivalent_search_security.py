@@ -39,7 +39,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
             company_id=self.env.company.id,
             company_ids=[Command.set([self.env.company.id])],
         )
-        user.groups_id = [Command.link(security_group.id)]
+        user.group_ids = [Command.link(security_group.id)]
         rule_values = {
             "name": "PEQ Direct Rule %s" % suffix,
             "model_id": self.env["ir.model"]._get(model_name).id,
@@ -95,10 +95,16 @@ class TestDirectEquivalentSecurity(TransactionCase):
     def test_archived_neighbor_respects_active_test(self):
         self.product_b.active = False
 
-        default_ids = self.env["product.product"]._name_search("PEQ-DIRECT-SEC-A")
-        all_ids = self.env["product.product"].with_context(
-            active_test=False
-        )._name_search("PEQ-DIRECT-SEC-A")
+        default_ids = [
+            product_id
+            for product_id, _ in self.env["product.product"].name_search("PEQ-DIRECT-SEC-A")
+        ]
+        all_ids = [
+            product_id
+            for product_id, _ in self.env["product.product"].with_context(
+                active_test=False
+            ).name_search("PEQ-DIRECT-SEC-A")
+        ]
 
         self.assertEqual(default_ids, [self.product_a.id])
         self.assertEqual(all_ids[0], self.product_a.id)
@@ -118,8 +124,8 @@ class TestDirectEquivalentSecurity(TransactionCase):
             source.with_user(user).write({
                 "direct_equivalent_product_tmpl_ids": [Command.link(target.id)],
             })
-        source.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
-        target.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        source.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
+        target.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
 
         self.assertNotIn(target.id, source.direct_equivalent_product_tmpl_ids.ids)
         self.assertNotIn(source.id, target.direct_equivalent_product_tmpl_ids.ids)
@@ -130,7 +136,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
         source.write({
             "direct_equivalent_product_tmpl_ids": [Command.link(target.id)],
         })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -144,7 +150,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
         source.with_user(user).write({
             "direct_equivalent_product_tmpl_ids": [Command.clear()],
         })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -158,7 +164,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
         source.write({
             "direct_equivalent_product_tmpl_ids": [Command.link(target.id)],
         })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -179,7 +185,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
             source.with_user(user).write({
                 "direct_equivalent_product_tmpl_ids": [Command.unlink(target.id)],
             })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -203,14 +209,17 @@ class TestDirectEquivalentSecurity(TransactionCase):
             ],
         })
 
-        ids = self.env["product.product"]._name_search(
-            "PEQ-SHARED-ANCHOR",
-            args=[
-                "|",
-                ("company_id", "=", False),
-                ("company_id", "=", self.env.company.id),
-            ],
-        )
+        ids = [
+            product_id
+            for product_id, _ in self.env["product.product"].name_search(
+                "PEQ-SHARED-ANCHOR",
+                domain=[
+                    "|",
+                    ("company_id", "=", False),
+                    ("company_id", "=", self.env.company.id),
+                ],
+            )
+        ]
 
         self.assertIn(shared_anchor.id, ids)
         self.assertNotIn(company_b_neighbor.id, ids)

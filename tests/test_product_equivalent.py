@@ -183,7 +183,7 @@ class TestDirectEquivalentRelation(TransactionCase):
 
         deleted_id = self.template_a.id
         self.template_a.unlink()
-        self.template_b.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        self.template_b.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
 
         self.assertNotIn(deleted_id, self._ids(self.template_b))
 
@@ -219,16 +219,17 @@ class TestDirectEquivalentSearch(TransactionCase):
         })
 
     def _name_search(self, name, args=None, operator="ilike", limit=100):
-        return self.env["product.product"]._name_search(
-            name,
-            args=args,
+        pairs = self.env["product.product"].name_search(
+            name=name,
+            domain=args,
             operator=operator,
             limit=limit,
         )
+        return [product_id for product_id, _ in pairs]
 
     def test_search_expands_only_direct_neighbors(self):
-        ids_from_a = self._name_search("PEQ-DIRECT-A", limit=False)
-        ids_from_b = self._name_search("PEQ-DIRECT-B", limit=False)
+        ids_from_a = self._name_search("PEQ-DIRECT-A", limit=None)
+        ids_from_b = self._name_search("PEQ-DIRECT-B", limit=None)
 
         self.assertEqual(ids_from_a[0], self.product_a.id)
         self.assertIn(self.product_b.id, ids_from_a)
@@ -271,7 +272,7 @@ class TestDirectEquivalentSearch(TransactionCase):
         self.product_a.product_tmpl_id.equivalent_group_id = legacy_group
         self.product_c.product_tmpl_id.equivalent_group_id = legacy_group
 
-        ids = self._name_search("PEQ-DIRECT-A", limit=False)
+        ids = self._name_search("PEQ-DIRECT-A", limit=None)
 
         self.assertIn(self.product_b.id, ids)
         self.assertNotIn(self.product_c.id, ids)
@@ -316,6 +317,6 @@ class TestDirectEquivalentSearch(TransactionCase):
             "direct_equivalent_product_tmpl_ids": [Command.link(target_template.id)],
         })
 
-        ids = self._name_search("PEQ-DIRECT-A", limit=False)
+        ids = self._name_search("PEQ-DIRECT-A", limit=None)
 
         self.assertTrue(set(target_template.product_variant_ids.ids) <= set(ids))

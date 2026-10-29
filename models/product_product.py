@@ -2,7 +2,7 @@ from difflib import SequenceMatcher
 import re
 
 from odoo import api, models
-from odoo.osv import expression
+from odoo.fields import Domain
 
 
 def _search_relevance(product, query):
@@ -41,7 +41,29 @@ class ProductProduct(models.Model):
     _inherit = "product.product"
 
     @api.model
-    def _name_search(self, name, args=None, operator="ilike", limit=100, name_get_uid=None):
+    @api.readonly
+    def name_search(self, name="", domain=None, operator="ilike", limit=100):
+        product_ids = self._name_search(
+            name=name,
+            domain=domain,
+            operator=operator,
+            limit=limit,
+        )
+        return [
+            (product.id, product.display_name)
+            for product in self.browse(product_ids).sudo()
+        ]
+
+    @api.model
+    def _name_search(
+        self,
+        name="",
+        args=None,
+        operator="ilike",
+        limit=100,
+        name_get_uid=None,
+        domain=None,
+    ):
         """Extend native product lookup with manually-defined commercial equivalents.
 
         Design goals:
@@ -50,22 +72,25 @@ class ProductProduct(models.Model):
         - only expand positive searches;
         - append equivalents without duplicating the native results.
         """
-        args = list(args or [])
+        base_domain = list(domain if domain is not None else (args or []))
         # Odoo's native SQL order favors populated default_code values over
         # NULL codes. Keep a bounded candidate window, then rank by text match.
-        positive_search = operator not in expression.NEGATIVE_TERM_OPERATORS
-        search_limit = max(limit, 50) if limit and positive_search else limit
-        native_ids = list(
-            super()._name_search(
-                name=name,
-                args=args,
-                operator=operator,
-                limit=search_limit,
-                name_get_uid=name_get_uid,
-            )
+        positive_search = operator not in Domain.NEGATIVE_OPERATORS
+        normalized_limit = limit if limit else None
+        search_limit = (
+            max(normalized_limit, 50)
+            if normalized_limit and positive_search and name
+            else normalized_limit
         )
+        native_pairs = super().name_search(
+            name=name,
+            domain=base_domain,
+            operator=operator,
+            limit=search_limit,
+        )
+        native_ids = [product_id for product_id, _ in native_pairs]
 
-        if name and operator not in expression.NEGATIVE_TERM_OPERATORS and native_ids:
+        if name and positive_search and native_ids:
             ranking_model = self.with_user(name_get_uid) if name_get_uid else self
             native_data = ranking_model.browse(native_ids).read(["default_code", "name"])
             relevance = {
@@ -81,19 +106,18 @@ class ProductProduct(models.Model):
                     original_order[product_id],
                 )
             )
-            if limit:
-                native_ids = native_ids[:limit]
+            if normalized_limit:
+                native_ids = native_ids[:normalized_limit]
 
-        if not name or operator in expression.NEGATIVE_TERM_OPERATORS or not native_ids:
+        if not name or not positive_search or not native_ids:
             return native_ids
 
-        if limit and len(native_ids) >= limit:
+        if normalized_limit and len(native_ids) >= normalized_limit:
             return native_ids
 
         anchor_template_ids = list(
             self.env["product.template"]._search(
                 [("product_variant_ids", "in", native_ids)],
-                access_rights_uid=name_get_uid,
             )
         )
         if not anchor_template_ids:
@@ -108,25 +132,21 @@ class ProductProduct(models.Model):
                         anchor_template_ids,
                     ),
                 ],
-                access_rights_uid=name_get_uid,
             )
         )
         if not equivalent_template_ids:
             return native_ids
 
-        remaining = (limit - len(native_ids)) if limit else False
-        equivalent_domain = expression.AND([
-            args,
-            [
-                ("product_tmpl_id", "in", equivalent_template_ids),
-                ("id", "not in", native_ids),
-            ],
+        remaining = (normalized_limit - len(native_ids)) if normalized_limit else None
+        equivalent_domain = Domain(base_domain) & Domain([
+            ("product_tmpl_id", "in", equivalent_template_ids),
+            ("id", "not in", native_ids),
         ])
         equivalent_ids = list(
             self._search(
                 equivalent_domain,
                 limit=remaining,
-                access_rights_uid=name_get_uid,
+                order=self._order,
             )
         )
         if equivalent_ids:
