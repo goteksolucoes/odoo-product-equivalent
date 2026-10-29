@@ -1,4 +1,4 @@
-from odoo import _, api, Command, fields, models
+from odoo import api, Command, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -114,7 +114,7 @@ class ProductTemplate(models.Model):
                 ("direct_equivalent_source_product_tmpl_ids", "in", template.id),
             ], limit=1)
             if has_self_link:
-                raise ValidationError(_(
+                raise ValidationError(self.env._(
                     "A product cannot be equivalent to itself."
                 ))
             has_incompatible_company = template.company_id and (
@@ -129,7 +129,7 @@ class ProductTemplate(models.Model):
                 ], limit=1)
             )
             if has_incompatible_company:
-                raise ValidationError(_(
+                raise ValidationError(self.env._(
                     "Equivalent products must belong to the same company, or at "
                     "least one of them must be shared."
                 ))
@@ -140,6 +140,6 @@ class ProductTemplate(models.Model):
         for template in self:
             group = template.equivalent_group_id
             if group.company_id and group.company_id != template.company_id:
-                raise ValidationError(_(
+                raise ValidationError(self.env._(
                     "The equivalence group must be shared or belong to the product's company."
                 ))

@@ -12,12 +12,12 @@
                            colspan="2"
                            domain="['&amp;', ('id', '!=', id), '|', ('company_id', '=', False), ('company_id', '=?', company_id)]"
                            options="{'no_create': True, 'no_create_edit': True}">
-                        <tree width="100%">
+                        <list>
                             <field name="default_code" width="25%"/>
                             <field name="name" width="50%"/>
                             <field name="company_id" groups="base.group_multi_company" optional="hide"/>
                             <field name="sale_ok" optional="hide"/>
-                        </tree>
+                        </list>
                     </field>
                 </group>
             </xpath>
