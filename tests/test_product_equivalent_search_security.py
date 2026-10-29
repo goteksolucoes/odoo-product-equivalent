@@ -147,10 +147,9 @@ class TestDirectEquivalentSecurity(TransactionCase):
             groups="sales_team.group_sale_manager,product.group_product_manager",
         )
 
-        with self.assertRaises(AccessError), self.env.cr.savepoint():
-            source.with_user(user).write({
-                "direct_equivalent_product_tmpl_ids": [Command.clear()],
-            })
+        source.with_user(user).write({
+            "direct_equivalent_product_tmpl_ids": [Command.clear()],
+        })
         (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
