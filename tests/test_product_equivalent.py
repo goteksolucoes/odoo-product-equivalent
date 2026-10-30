@@ -264,6 +264,65 @@ class TestDirectEquivalentSearch(TransactionCase):
         self.assertEqual(ids[0], prefix_match.id)
         self.assertIn(partial_code_match.id, ids)
 
+    def test_template_autocomplete_keeps_exact_code_ahead_of_equivalents(self):
+        Template = self.env["product.template"]
+        equivalents = Template.create([
+            {"name": "PEQ Ranking " + code, "default_code": code, "sale_ok": True}
+            for code in ["FO410B", "W610", "W610/3"]
+        ])
+        anchor = Template.create({
+            "name": "PEQ Ranking WO120",
+            "default_code": "WO120",
+            "sale_ok": True,
+            "direct_equivalent_product_tmpl_ids": [Command.set(equivalents.ids)],
+        })
+        args = [
+            ("sale_ok", "=", True),
+            "|", ("company_id", "=", False),
+            ("company_id", "=", self.env.company.id),
+            ("name", "ilike", "PEQ Ranking "),
+        ]
+        Search = Template.with_context(
+            company_id=self.env.company.id,
+            quantity=1,
+            display_default_code=True,
+        )
+
+        # Test the public RPC seam: core product.template reorders the variant
+        # results by priority/name before this addon's template override runs.
+        pairs = Search.name_search("wo120", args=args, operator="ilike", limit=8)
+        limited = Search.name_search("wo120", args=args, operator="ilike", limit=1)
+
+        self.assertEqual(pairs[0][0], anchor.id)
+        self.assertEqual(set(dict(pairs)), set((anchor | equivalents).ids))
+        self.assertEqual([pair[0] for pair in limited], [anchor.id])
+        self.assertEqual(len(pairs), len(dict(pairs)))
+
+        equivalents[0].sale_ok = False
+        equivalents[1].active = False
+        filtered = Search.name_search("wo120", args=args, limit=8)
+        self.assertEqual(filtered[0][0], anchor.id)
+        self.assertNotIn(equivalents[0].id, dict(filtered))
+        self.assertNotIn(equivalents[1].id, dict(filtered))
+        archived = Search.with_context(active_test=False).name_search(
+            "wo120", args=args, limit=8,
+        )
+        self.assertEqual(archived[0][0], anchor.id)
+        self.assertIn(equivalents[1].id, dict(archived))
+
+    def test_template_autocomplete_keeps_name_prefix_ahead_of_partial_code(self):
+        Template = self.env["product.template"]
+        prefix = Template.create({"name": "PEQ-RANK-WO120 WEGA"})
+        partial = Template.create({
+            "name": "PEQ Ranking Partial",
+            "default_code": "X-PEQ-RANK-WO120",
+        })
+
+        pairs = Template.name_search("peq-rank-wo120", limit=8)
+
+        self.assertEqual(pairs[0][0], prefix.id)
+        self.assertIn(partial.id, dict(pairs))
+
     def test_legacy_group_is_ignored_by_search(self):
         legacy_group = self.env["product.equivalent.group"].create({
             "name": "PEQ Legacy Search Group",
