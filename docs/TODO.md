@@ -8,15 +8,16 @@ Atualizado em 29/10/2026. Este checklist registra a implementação de equivalê
 - Addon Odoo 16: versão `16.0.2.0.0`, instalado no ambiente local.
 - Equivalência: relação direta entre templates, simétrica e não transitiva; a ficha do produto usa uma grade de seleção.
 - Manifesto: autor, site, ícone e categoria ajustados; o usuário confirmou que os metadados aparecem no Odoo.
-- Branches `17.0`, `18.0` e `19.0` portadas e publicadas. As duas suítes OCA (Odoo e OCB) passaram com 32/32 testes em cada versão.
+- Branch `16.0` mantém a base compatível e agora tem workflow OCA; `17.0`, `18.0` e `19.0` foram portadas. Odoo e OCB passaram com 32/32 testes em cada branch.
 
 | Branch | Commit | CI Odoo | CI OCB |
 |---|---|---|---|
 | `19.0` | `a1ea3ae` | 32/32 | 32/32 |
 | `18.0` | `5682c74` | 32/32 | 32/32 |
 | `17.0` | `bc0edef` | 32/32 | 32/32 |
+| `16.0` | `8ba6411` | 32/32 | 32/32 |
 
-Execuções: [CI 19.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40971959147), [CI 18.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40974776903), [CI 17.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40976387989).
+Execuções: [CI 19.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40971959147), [CI 18.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40974776903), [CI 17.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40976387989), [CI 16.0](https://github.com/goteksolucoes/odoo-product-equivalent/actions/runs/40977877659).
 
 ## Prioridade 0 — homologar a experiência no Odoo 16 local
 
@@ -29,9 +30,9 @@ Execuções: [CI 19.0](https://github.com/goteksolucoes/odoo-product-equivalent/
 
 ## Prioridade 1 — fechar governança das branches
 
-- [x] Criar workflow de testes OCA para `17.0`, `18.0` e `19.0`.
+- [x] Criar workflows de testes OCA para `16.0`, `17.0`, `18.0` e `19.0`.
 - [x] Portar o código e os testes para Odoo `17.0`, `18.0` e `19.0` em commits separados.
-- [x] Passar os testes de instalação e do addon em Odoo e OCB para as três versões.
+- [x] Passar os testes de instalação e do addon em Odoo e OCB nas quatro branches.
 - [ ] Confirmar a branch padrão configurada no GitHub e decidir se `19.0` deve ser a padrão do repositório.
 - [ ] Adicionar os arquivos de cada versão às convenções OCA de pre-commit, metadados e documentação, se aplicável.
 
