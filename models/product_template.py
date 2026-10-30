@@ -49,33 +49,61 @@ class ProductTemplate(models.Model):
     )
 
     @api.model
+    @api.readonly
     def name_search(self, name="", domain=None, operator="ilike", limit=100, args=None):
         base_domain = list(domain if domain is not None else (args or []))
-        # Core searches display_name / variants, then orders templates with its _order.
-        # Rank after that step, before applying the autocomplete limit.
+        # Autocomplete in Sales queries product.template. Core searches display_name /
+        # variant codes, but does not expand commercial equivalents on templates.
+        # Expand direct equivalents and rank combined candidates by text match.
         rank_results = (
             bool(name)
             and operator not in Domain.NEGATIVE_OPERATORS
-            and not any(term[0] == "id" for term in base_domain if isinstance(term, (list, tuple)) and len(term) > 0)
+            and not any(
+                isinstance(term, (list, tuple)) and len(term) > 0 and term[0] == "id"
+                for term in base_domain
+            )
         )
         candidate_limit = max(limit, 50) if limit and rank_results else limit
-        candidate_pairs = super().name_search(
+        native_pairs = super().name_search(
             name=name, domain=base_domain, operator=operator, limit=candidate_limit,
         )
-        if not rank_results or not candidate_pairs:
-            return candidate_pairs
-        candidate_ids = [pair[0] for pair in candidate_pairs]
+        if not rank_results or not native_pairs:
+            return native_pairs
+
+        native_ids = [pair[0] for pair in native_pairs]
+        pair_dict = dict(native_pairs)
+
+        # Expand commercial equivalents: find templates directly linked to native matches.
+        # Preserves caller domain, active_test and the caller's record rules/ACL.
+        equivalent_domain = Domain(base_domain) & Domain([
+            ("direct_equivalent_product_tmpl_ids", "in", native_ids),
+            ("id", "not in", native_ids),
+        ])
+        equivalent_ids = self.search(
+            equivalent_domain,
+            limit=candidate_limit,
+            order=self._order,
+        ).ids
+
+        if equivalent_ids:
+            equivalent_records = self.browse(equivalent_ids)
+            for record in equivalent_records:
+                pair_dict[record.id] = record.display_name
+
+        candidate_ids = native_ids + equivalent_ids
+        candidate_data = self.browse(candidate_ids).read(
+            ["default_code", "name"]
+        )
         relevance = {
             row["id"]: _search_relevance(row, name)
-            for row in self.browse(candidate_ids).read(
-                ["default_code", "name"]
-            )
+            for row in candidate_data
         }
+        native_id_set = set(native_ids)
         original_order = {tmpl_id: idx for idx, tmpl_id in enumerate(candidate_ids)}
-        pair_dict = dict(candidate_pairs)
         candidate_ids.sort(
             key=lambda tmpl_id: (
                 relevance.get(tmpl_id, (5, 0, 0)),
+                0 if tmpl_id in native_id_set else 1,
                 original_order[tmpl_id],
             )
         )
