@@ -1,9 +1,41 @@
 from odoo import _, api, Command, fields, models
 from odoo.exceptions import ValidationError
+from odoo.osv import expression
+
+from .product_product import _search_relevance
 
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
+
+    @api.model
+    def _name_search(self, name, args=None, operator="ilike", limit=100, name_get_uid=None):
+        # Core delegates to variants, then reorders templates with its _order.
+        # Rank after that final step, before applying the autocomplete limit.
+        rank_results = (
+            bool(name)
+            and operator not in expression.NEGATIVE_TERM_OPERATORS
+            and not any(term[0] == "id" for term in (args or []))
+        )
+        candidate_limit = max(limit, 50) if limit and rank_results else limit
+        candidate_ids = list(super()._name_search(
+            name, args=args, operator=operator, limit=candidate_limit,
+            name_get_uid=name_get_uid,
+        ))
+        if not rank_results:
+            return candidate_ids
+        ranking_model = self.with_user(name_get_uid) if name_get_uid else self
+        relevance = {
+            row["id"]: _search_relevance(row, name)
+            for row in ranking_model.browse(candidate_ids).read(
+                ["default_code", "name"]
+            )
+        }
+        # Python's stable sort preserves the core order for equal relevance.
+        candidate_ids.sort(
+            key=lambda template_id: relevance.get(template_id, (5, 0, 0))
+        )
+        return candidate_ids[:limit] if limit else candidate_ids
 
     equivalent_group_id = fields.Many2one(
         "product.equivalent.group",

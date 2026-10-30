@@ -45,10 +45,10 @@ class ProductProduct(models.Model):
         """Extend native product lookup with manually-defined commercial equivalents.
 
         Design goals:
-        - keep Odoo's native product search as the source of truth;
+        - keep Odoo's native product search as the source of candidate anchors;
         - preserve domains received from callers (sale_ok, company, etc.);
         - only expand positive searches;
-        - append equivalents without duplicating the native results.
+        - rank native matches and direct equivalents together.
         """
         args = list(args or [])
         # Odoo's native SQL order favors populated default_code values over
@@ -69,29 +69,7 @@ class ProductProduct(models.Model):
             )
         )
 
-        if name and operator not in expression.NEGATIVE_TERM_OPERATORS and native_ids:
-            ranking_model = self.with_user(name_get_uid) if name_get_uid else self
-            native_data = ranking_model.browse(native_ids).read(["default_code", "name"])
-            relevance = {
-                row["id"]: _search_relevance(row, name)
-                for row in native_data
-            }
-            original_order = {
-                product_id: index for index, product_id in enumerate(native_ids)
-            }
-            native_ids.sort(
-                key=lambda product_id: (
-                    relevance.get(product_id, (5, 0, 0)),
-                    original_order[product_id],
-                )
-            )
-            if limit:
-                native_ids = native_ids[:limit]
-
-        if not name or operator in expression.NEGATIVE_TERM_OPERATORS or not native_ids:
-            return native_ids
-
-        if limit and len(native_ids) >= limit:
+        if not name or not positive_search or not native_ids:
             return native_ids
 
         anchor_template_ids = list(
@@ -100,55 +78,57 @@ class ProductProduct(models.Model):
                 access_rights_uid=name_get_uid,
             )
         )
-        if not anchor_template_ids:
-            return native_ids
-
-        equivalent_template_ids = list(
-            self.env["product.template"]._search(
-                [
-                    (
-                        "direct_equivalent_product_tmpl_ids",
-                        "in",
-                        anchor_template_ids,
-                    ),
-                ],
-                access_rights_uid=name_get_uid,
-            )
-        )
-        if not equivalent_template_ids:
-            return native_ids
-
-        remaining = (limit - len(native_ids)) if limit else False
-        equivalent_domain = expression.AND([
-            args,
-            [
-                ("product_tmpl_id", "in", equivalent_template_ids),
-                ("id", "not in", native_ids),
-            ],
-        ])
-        equivalent_ids = list(
-            self._search(
-                equivalent_domain,
-                limit=remaining,
-                access_rights_uid=name_get_uid,
-            )
-        )
-        if equivalent_ids:
-            ranking_model = self.with_user(name_get_uid) if name_get_uid else self
-            equivalent_data = ranking_model.browse(equivalent_ids).read(
-                ["default_code", "name"]
-            )
-            relevance = {
-                row["id"]: _search_relevance(row, name)
-                for row in equivalent_data
-            }
-            original_order = {
-                product_id: index for index, product_id in enumerate(equivalent_ids)
-            }
-            equivalent_ids.sort(
-                key=lambda product_id: (
-                    relevance.get(product_id, (5, 0, 0)),
-                    original_order[product_id],
+        equivalent_ids = []
+        if anchor_template_ids:
+            equivalent_template_ids = list(
+                self.env["product.template"]._search(
+                    [
+                        (
+                            "direct_equivalent_product_tmpl_ids",
+                            "in",
+                            anchor_template_ids,
+                        ),
+                    ],
+                    access_rights_uid=name_get_uid,
                 )
             )
-        return native_ids + equivalent_ids
+            if equivalent_template_ids:
+                equivalent_domain = expression.AND([
+                    args,
+                    [
+                        ("product_tmpl_id", "in", equivalent_template_ids),
+                        ("id", "not in", native_ids),
+                    ],
+                ])
+                equivalent_ids = list(
+                    self._search(
+                        equivalent_domain,
+                        limit=search_limit,
+                        access_rights_uid=name_get_uid,
+                    )
+                )
+
+        # The autocomplete renders IDs in the order returned by _name_search.
+        # Rank both sources together so a strong text match among equivalents
+        # can outrank a weak native hit (for example a supplier-code match).
+        candidate_ids = native_ids + equivalent_ids
+        # access_rights_uid affects ACL checks in _search, not current-user rules.
+        candidate_data = self.browse(candidate_ids).read(
+            ["default_code", "name"]
+        )
+        relevance = {
+            row["id"]: _search_relevance(row, name)
+            for row in candidate_data
+        }
+        native_id_set = set(native_ids)
+        original_order = {
+            product_id: index for index, product_id in enumerate(candidate_ids)
+        }
+        candidate_ids.sort(
+            key=lambda product_id: (
+                relevance.get(product_id, (5, 0, 0)),
+                0 if product_id in native_id_set else 1,
+                original_order[product_id],
+            )
+        )
+        return candidate_ids[:limit] if limit else candidate_ids
