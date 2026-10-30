@@ -31,9 +31,33 @@ class ProductTemplate(models.Model):
                 ["default_code", "name"]
             )
         }
-        # Python's stable sort preserves the core order for equal relevance.
+        # A multi-variant template has no default_code. Reuse the variant
+        # search's ranking, including its native-result tie break, rather than
+        # discarding the exact variant code when core reorders templates.
+        Product = self.env["product.product"]
+        product_ids = Product._name_search(
+            name,
+            args=expression.AND([
+                args or [],
+                [("product_tmpl_id", "in", candidate_ids)],
+            ]),
+            operator=operator,
+            limit=candidate_limit,
+            name_get_uid=name_get_uid,
+        ) if candidate_ids else []
+        variant_relevance = {}
+        for index, row in enumerate(Product.browse(product_ids).read(
+            ["default_code", "name", "product_tmpl_id"]
+        )):
+            template_id = row["product_tmpl_id"][0]
+            rank = (_search_relevance(row, name), index)
+            if template_id not in variant_relevance or rank < variant_relevance[template_id]:
+                variant_relevance[template_id] = rank
         candidate_ids.sort(
-            key=lambda template_id: relevance.get(template_id, (5, 0, 0))
+            key=lambda template_id: variant_relevance.get(
+                template_id,
+                (relevance.get(template_id, (5, 0, 0)), len(product_ids)),
+            )
         )
         return candidate_ids[:limit] if limit else candidate_ids
 
