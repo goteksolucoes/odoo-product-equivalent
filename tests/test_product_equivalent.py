@@ -299,6 +299,18 @@ class TestDirectEquivalentSearch(TransactionCase):
         self.assertEqual([pair[0] for pair in limited], [anchor.id])
         self.assertEqual(len(pairs), len(dict(pairs)))
 
+        if hasattr(Search, "web_name_search"):
+            web_records = Search.web_name_search(
+                "wo120",
+                {"display_name": {}},
+                domain=args,
+                operator="ilike",
+                limit=8,
+            )
+            web_ids = [row["id"] for row in web_records]
+            self.assertEqual(web_ids[0], anchor.id)
+            self.assertEqual(set(web_ids), set((anchor | equivalents).ids))
+
         equivalents[0].sale_ok = False
         equivalents[1].active = False
         filtered = Search.name_search("wo120", args=args, limit=8)

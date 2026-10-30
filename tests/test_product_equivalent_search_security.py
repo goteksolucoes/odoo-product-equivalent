@@ -77,12 +77,50 @@ class TestDirectEquivalentSecurity(TransactionCase):
             "template_ranking",
         )
 
-        ids = self.env["product.template"].with_user(user)._name_search(
+        Search = self.env["product.template"].with_user(user)
+        ids = Search._name_search(
             "PEQ-DIRECT-SEC-A",
             name_get_uid=self.env.ref("base.user_admin").id,
         )
-
         self.assertEqual(ids, [self.product_a.product_tmpl_id.id])
+
+        pairs = Search.name_search("PEQ-DIRECT-SEC-A")
+        self.assertEqual([p[0] for p in pairs], [self.product_a.product_tmpl_id.id])
+
+        if hasattr(Search, "web_name_search"):
+            web_records = Search.web_name_search(
+                "PEQ-DIRECT-SEC-A",
+                {"display_name": {}},
+            )
+            self.assertEqual([r["id"] for r in web_records], [self.product_a.product_tmpl_id.id])
+
+    def test_template_caller_company_domain_filters_direct_neighbor(self):
+        company_b = self.env["res.company"].create({"name": "PEQ Tmpl Search Company B"})
+        shared_anchor = self.env["product.template"].create({
+            "name": "PEQ Tmpl Shared Anchor",
+            "default_code": "PEQ-TMPL-SHARED",
+        })
+        company_b_neighbor = self.env["product.template"].create({
+            "name": "PEQ Tmpl Company B Neighbor",
+            "company_id": company_b.id,
+        })
+        shared_anchor.write({
+            "direct_equivalent_product_tmpl_ids": [
+                Command.link(company_b_neighbor.id),
+            ],
+        })
+
+        pairs = self.env["product.template"].name_search(
+            "PEQ-TMPL-SHARED",
+            args=[
+                "|",
+                ("company_id", "=", False),
+                ("company_id", "=", self.env.company.id),
+            ],
+        )
+        ids = [p[0] for p in pairs]
+        self.assertIn(shared_anchor.id, ids)
+        self.assertNotIn(company_b_neighbor.id, ids)
 
     def test_anchor_template_rule_applies_with_alternate_name_get_uid(self):
         user = self._new_rule_user(
