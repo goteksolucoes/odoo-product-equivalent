@@ -18,9 +18,17 @@ As equivalências são cadastradas no nível do modelo de produto (`product.temp
 
 ### Capturas de tela
 
+As capturas foram obtidas no Odoo 16 e ilustram o fluxo de uso também disponível nas branches 17.0, 18.0 e 19.0. A aparência da interface pode variar entre versões.
+
 Grade de equivalências diretas na ficha do produto:
 
 ![Grade de produtos equivalentes na ficha do produto](static/description/screenshots/direct-equivalents-grid.png)
+
+Busca de produtos equivalentes ao preparar uma cotação:
+
+![Busca de produtos equivalentes na linha de uma cotação](static/description/screenshots/quotation-product-equivalents.png)
+
+No exemplo, a pesquisa por `wo12` apresenta `WO120 WEGA` e o equivalente `OC1028 MAHLE` no campo **Produto** da linha da cotação. Selecione a alternativa desejada para incluí-la na linha; o módulo não adiciona os dois produtos automaticamente.
 
 ### Busca e segurança
 
