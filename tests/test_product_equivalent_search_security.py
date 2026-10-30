@@ -79,7 +79,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
 
         ids = self._search_as(user)
 
-        self.assertEqual(ids, [self.product_a.id])
+        self.assertEqual(ids, [])
 
     def test_current_variant_rule_applies_with_alternate_name_get_uid(self):
         user = self._new_rule_user(
@@ -118,8 +118,8 @@ class TestDirectEquivalentSecurity(TransactionCase):
             source.with_user(user).write({
                 "direct_equivalent_product_tmpl_ids": [Command.link(target.id)],
             })
-        source.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
-        target.invalidate_cache(["direct_equivalent_product_tmpl_ids"])
+        source.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
+        target.invalidate_recordset(["direct_equivalent_product_tmpl_ids"])
 
         self.assertNotIn(target.id, source.direct_equivalent_product_tmpl_ids.ids)
         self.assertNotIn(source.id, target.direct_equivalent_product_tmpl_ids.ids)
@@ -130,7 +130,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
         source.write({
             "direct_equivalent_product_tmpl_ids": [Command.link(target.id)],
         })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -144,7 +144,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
         source.with_user(user).write({
             "direct_equivalent_product_tmpl_ids": [Command.clear()],
         })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -158,7 +158,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
         source.write({
             "direct_equivalent_product_tmpl_ids": [Command.link(target.id)],
         })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])
@@ -179,7 +179,7 @@ class TestDirectEquivalentSecurity(TransactionCase):
             source.with_user(user).write({
                 "direct_equivalent_product_tmpl_ids": [Command.unlink(target.id)],
             })
-        (source | target).invalidate_cache([
+        (source | target).invalidate_recordset([
             "direct_equivalent_product_tmpl_ids",
             "direct_equivalent_source_product_tmpl_ids",
         ])

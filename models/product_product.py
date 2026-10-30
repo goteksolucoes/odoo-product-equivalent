@@ -54,7 +54,11 @@ class ProductProduct(models.Model):
         # Odoo's native SQL order favors populated default_code values over
         # NULL codes. Keep a bounded candidate window, then rank by text match.
         positive_search = operator not in expression.NEGATIVE_TERM_OPERATORS
-        search_limit = max(limit, 50) if limit and positive_search else limit
+        search_limit = (
+            max(limit, 50)
+            if limit and positive_search and name
+            else limit
+        )
         native_ids = list(
             super()._name_search(
                 name=name,
