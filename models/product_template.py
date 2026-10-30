@@ -1,9 +1,37 @@
 from odoo import _, api, Command, fields, models
 from odoo.exceptions import ValidationError
+from odoo.osv import expression
+
+from .product_product import _search_relevance
 
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
+
+    @api.model
+    def _name_search(self, name="", domain=None, operator="ilike", limit=100, order=None, name_get_uid=None, args=None):
+        base_domain = list(domain if domain is not None else (args or []))
+        rank_results = (
+            bool(name)
+            and operator not in expression.NEGATIVE_TERM_OPERATORS
+            and not any(term[0] == "id" for term in base_domain)
+        )
+        candidate_limit = max(limit, 50) if limit and rank_results else limit
+        candidate_ids = list(super()._name_search(
+            name, domain=base_domain, operator=operator, limit=candidate_limit, order=order,
+        ))
+        if not rank_results:
+            return candidate_ids
+        relevance = {
+            row["id"]: _search_relevance(row, name)
+            for row in self.browse(candidate_ids).read(
+                ["default_code", "name"]
+            )
+        }
+        candidate_ids.sort(
+            key=lambda template_id: relevance.get(template_id, (5, 0, 0))
+        )
+        return candidate_ids[:limit] if limit else candidate_ids
 
     equivalent_group_id = fields.Many2one(
         "product.equivalent.group",
