@@ -1,9 +1,53 @@
 from odoo import api, Command, fields, models
 from odoo.exceptions import ValidationError
+from odoo.osv import expression
+
+from .product_product import _search_relevance
 
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
+
+    @api.model
+    def name_search(self, name="", args=None, operator="ilike", limit=100):
+        # Core searches display_name / variants, then orders templates with its _order.
+        # Rank after that step, before applying the autocomplete limit.
+        rank_results = (
+            bool(name)
+            and operator not in expression.NEGATIVE_TERM_OPERATORS
+            and not any(term[0] == "id" for term in (args or []))
+        )
+        candidate_limit = max(limit, 50) if limit and rank_results else limit
+        candidate_pairs = super().name_search(
+            name=name, args=args, operator=operator, limit=candidate_limit,
+        )
+        if not rank_results or not candidate_pairs:
+            return candidate_pairs
+        candidate_ids = [pair[0] for pair in candidate_pairs]
+        relevance = {
+            row["id"]: _search_relevance(row, name)
+            for row in self.browse(candidate_ids).read(
+                ["default_code", "name"]
+            )
+        }
+        original_order = {tmpl_id: idx for idx, tmpl_id in enumerate(candidate_ids)}
+        pair_dict = dict(candidate_pairs)
+        candidate_ids.sort(
+            key=lambda tmpl_id: (
+                relevance.get(tmpl_id, (5, 0, 0)),
+                original_order[tmpl_id],
+            )
+        )
+        if limit:
+            candidate_ids = candidate_ids[:limit]
+        return [(tmpl_id, pair_dict[tmpl_id]) for tmpl_id in candidate_ids]
+
+    @api.model
+    def _name_search(self, name="", args=None, operator="ilike", limit=100, name_get_uid=None, domain=None):
+        del name_get_uid
+        base_domain = list(domain if domain is not None else (args or []))
+        pairs = self.name_search(name=name, args=base_domain, operator=operator, limit=limit)
+        return [pair[0] for pair in pairs]
 
     equivalent_group_id = fields.Many2one(
         "product.equivalent.group",

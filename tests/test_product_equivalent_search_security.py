@@ -70,6 +70,20 @@ class TestDirectEquivalentSecurity(TransactionCase):
 
         self.assertEqual(ids, [self.product_a.id])
 
+    def test_template_autocomplete_ranking_keeps_current_rule_with_name_get_uid(self):
+        user = self._new_rule_user(
+            "product.template",
+            [("id", "!=", self.product_b.product_tmpl_id.id)],
+            "template_ranking",
+        )
+
+        ids = self.env["product.template"].with_user(user)._name_search(
+            "PEQ-DIRECT-SEC-A",
+            name_get_uid=self.env.ref("base.user_admin").id,
+        )
+
+        self.assertEqual(ids, [self.product_a.product_tmpl_id.id])
+
     def test_anchor_template_rule_applies_with_alternate_name_get_uid(self):
         user = self._new_rule_user(
             "product.template",

@@ -70,7 +70,7 @@ class ProductProduct(models.Model):
         - keep Odoo's native product search as the source of truth;
         - preserve domains received from callers (sale_ok, company, etc.);
         - only expand positive searches;
-        - append equivalents without duplicating the native results.
+        - rank native matches and direct equivalents together.
         """
         del name_get_uid
         base_domain = list(domain if domain is not None else (args or []))
@@ -91,78 +91,56 @@ class ProductProduct(models.Model):
         )
         native_ids = [product_id for product_id, _ in native_pairs]
 
-        if name and positive_search and native_ids:
-            native_data = self.browse(native_ids).read(["default_code", "name"])
-            relevance = {
-                row["id"]: _search_relevance(row, name)
-                for row in native_data
-            }
-            original_order = {
-                product_id: index for index, product_id in enumerate(native_ids)
-            }
-            native_ids.sort(
-                key=lambda product_id: (
-                    relevance.get(product_id, (5, 0, 0)),
-                    original_order[product_id],
-                )
-            )
-            if normalized_limit:
-                native_ids = native_ids[:normalized_limit]
-
         if not name or not positive_search or not native_ids:
-            return native_ids
-
-        if normalized_limit and len(native_ids) >= normalized_limit:
             return native_ids
 
         anchor_template_ids = self.env["product.template"].search(
             [("product_variant_ids", "in", native_ids)],
         ).ids
-        if not anchor_template_ids:
-            return native_ids
-
-        equivalent_template_ids = self.env["product.template"].search(
-            [
-                (
-                    "direct_equivalent_product_tmpl_ids",
-                    "in",
-                    anchor_template_ids,
-                ),
-            ],
-        ).ids
-        if not equivalent_template_ids:
-            return native_ids
-
-        remaining = (normalized_limit - len(native_ids)) if normalized_limit else None
-        equivalent_domain = expression.AND([
-            base_domain,
-            [
-                ("product_tmpl_id", "in", equivalent_template_ids),
-                ("id", "not in", native_ids),
-            ],
-        ])
-        equivalent_ids = list(
-            self.search(
-                equivalent_domain,
-                limit=remaining,
-                order=self._order,
+        equivalent_ids = []
+        if anchor_template_ids:
+            equivalent_template_ids = self.env["product.template"].search(
+                [
+                    (
+                        "direct_equivalent_product_tmpl_ids",
+                        "in",
+                        anchor_template_ids,
+                    ),
+                ],
             ).ids
-        )
-        if equivalent_ids:
-            equivalent_data = self.browse(equivalent_ids).read(
-                ["default_code", "name"]
-            )
-            relevance = {
-                row["id"]: _search_relevance(row, name)
-                for row in equivalent_data
-            }
-            original_order = {
-                product_id: index for index, product_id in enumerate(equivalent_ids)
-            }
-            equivalent_ids.sort(
-                key=lambda product_id: (
-                    relevance.get(product_id, (5, 0, 0)),
-                    original_order[product_id],
+            if equivalent_template_ids:
+                equivalent_domain = expression.AND([
+                    base_domain,
+                    [
+                        ("product_tmpl_id", "in", equivalent_template_ids),
+                        ("id", "not in", native_ids),
+                    ],
+                ])
+                equivalent_ids = list(
+                    self.search(
+                        equivalent_domain,
+                        limit=search_limit,
+                        order=self._order,
+                    ).ids
                 )
+
+        candidate_ids = native_ids + equivalent_ids
+        candidate_data = self.browse(candidate_ids).read(
+            ["default_code", "name"]
+        )
+        relevance = {
+            row["id"]: _search_relevance(row, name)
+            for row in candidate_data
+        }
+        native_id_set = set(native_ids)
+        original_order = {
+            product_id: index for index, product_id in enumerate(candidate_ids)
+        }
+        candidate_ids.sort(
+            key=lambda product_id: (
+                relevance.get(product_id, (5, 0, 0)),
+                0 if product_id in native_id_set else 1,
+                original_order[product_id],
             )
-        return native_ids + equivalent_ids
+        )
+        return candidate_ids[:normalized_limit] if normalized_limit else candidate_ids
