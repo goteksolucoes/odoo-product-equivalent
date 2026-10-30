@@ -1,114 +1,69 @@
-# Product Equivalents — Odoo 16
+# Product Equivalents
 
-Reusable Odoo 16 addon for **commercially equivalent/substitute products**.
+Reusable Odoo addon for managing **direct product equivalents** and surfacing them in the standard product search used by sales orders.
 
-## Português (Brasil) — Produtos equivalentes
+## Português (Brasil)
 
-O **Product Equivalents** é um módulo para **Odoo 16** que permite organizar produtos comercialmente equivalentes, similares ou substitutos em grupos. Foi pensado para reutilização por empresas de diferentes segmentos em todo o Brasil, sem regras específicas de uma marca, cliente ou operação fiscal.
+O **Product Equivalents** permite relacionar produtos substitutos diretamente na ficha do produto. As relações são simétricas: se A é equivalente a B, B também é equivalente a A. Elas não são transitivas: se A equivale a B e B equivale a C, A não passa a equivaler a C automaticamente.
 
-### Como funciona na venda
+Na cotação ou no pedido de venda, a busca nativa do Odoo continua funcionando e pode apresentar produtos equivalentes diretamente relacionados aos resultados encontrados. O vendedor escolhe qual produto incluir; o módulo não adiciona alternativas automaticamente.
 
-Ao pesquisar um produto no campo de produto de uma linha do pedido de venda, o Odoo mantém sua busca padrão. Se um dos produtos encontrados pertencer a um grupo de equivalência, os demais produtos desse grupo também poderão aparecer como opções.
+### Como usar
 
-Por exemplo, um grupo `FILTRO-001` pode reunir três produtos de referências diferentes: `AAA-001`, `BBB-001` e `CCC-001`. Ao pesquisar `AAA-001`, o vendedor poderá encontrar o produto original e as alternativas cadastradas no mesmo grupo, escolhendo apenas um deles para a linha do pedido.
+1. Abra o cadastro de um produto.
+2. Na aba **Vendas**, use a grade **Produtos equivalentes** para selecionar ou remover relações diretas.
+3. Ao pesquisar esse produto em uma linha da cotação ou do pedido de venda, confira as alternativas exibidas no autocomplete.
 
-Nenhum produto equivalente é adicionado automaticamente ao pedido. O módulo oferece alternativas de substituição; a escolha continua com o vendedor.
+As equivalências são cadastradas no nível do modelo de produto (`product.template`), portanto as variantes desse modelo podem participar da busca. A grade não cria produtos nem grupos inline. A empresa deve validar se cada relação representa uma substituição tecnicamente adequada.
 
-### Organização dos grupos
+### Capturas de tela
 
-- Os grupos são cadastrados manualmente e vinculados aos produtos pelo formulário de produto.
-- Cada modelo de produto pode pertencer a nenhum ou a um único grupo de equivalência.
-- A equivalência é definida no nível do modelo de produto (`product.template`); suas variantes são consideradas candidatas na busca.
-- A empresa é responsável por validar quais produtos podem ser considerados substitutos para sua aplicação. O cadastro no grupo não certifica compatibilidade técnica.
+As capturas foram obtidas no Odoo 16 e ilustram o fluxo de uso também disponível nas branches 17.0, 18.0 e 19.0. A aparência da interface pode variar entre versões.
 
-### Comportamento e escopo da primeira versão
+Grade de equivalências diretas na ficha do produto:
 
-Os resultados da busca padrão aparecem primeiro. Os equivalentes são acrescentados quando há espaço no limite de resultados, respeitando os filtros recebidos pela busca, como produtos disponíveis para venda e restrições de empresa.
+![Grade de produtos equivalentes na ficha do produto](static/description/screenshots/direct-equivalents-grid.png)
 
-Esta versão contempla grupos de equivalência e sua integração com a busca de produtos. Recursos como comparação de preços e estoque, ordenação por disponibilidade, importação de referências cruzadas e sugestões por inteligência artificial não fazem parte do escopo inicial.
+Busca de produtos equivalentes ao preparar uma cotação:
 
-### Instalação e situação do projeto
+![Busca de produtos equivalentes na linha de uma cotação](static/description/screenshots/quotation-product-equivalents.png)
 
-O nome técnico do módulo é `product_equivalent`. Para instalá-lo, coloque a pasta do módulo em um diretório de addons do Odoo 16, atualize a lista de aplicativos e instale **Product Equivalents**. Os exemplos de comandos estão na seção **Installation**, abaixo.
+No exemplo, a pesquisa por `wo12` apresenta `WO120 WEGA` e o equivalente `OC1028 MAHLE` no campo **Produto** da linha da cotação. Selecione a alternativa desejada para incluí-la na linha; o módulo não adiciona os dois produtos automaticamente.
 
-O projeto está em desenvolvimento e auditoria técnica. A instalação e os testes em uma base Odoo 16 de homologação devem ser concluídos antes do uso em produção.
+### Busca e segurança
 
-## Business objective
+- Resultados nativos e equivalentes diretos são ordenados pela aderência do nome e da referência ao texto pesquisado; resultados nativos prevalecem em caso de empate.
+- A expansão considera somente relações diretas dos resultados nativos; não percorre relações em cadeia.
+- Domínios da busca, como disponibilidade para venda e empresa, continuam aplicados.
+- A visibilidade dos produtos segue as regras de acesso e de empresa do Odoo.
+- O limite do autocomplete continua valendo.
 
-When a salesperson searches for Product A in a Sales Order, Odoo should continue to return the normal match and may also return other products assigned to the same equivalence group. This is not an upsell/cross-sell feature: the salesperson chooses one product according to brand, price, availability, or commercial criteria.
+### Atualização de grupos legados
 
-## Example
+Na atualização para a versão `17.0.2.0.0`, grupos legados ativos com exatamente dois produtos compatíveis são convertidos em uma relação direta. Grupos ativos com mais de dois produtos ou com produtos de empresas específicas diferentes interrompem a atualização para evitar a criação automática de combinações ambíguas. Grupos legados são mantidos para auditoria.
 
-Group `FILTER-001`:
-- `AAA-001` — Brand A
-- `BBB-001` — Brand B
-- `CCC-001` — Brand C
+## English
 
-Typing `AAA-001` in the product field can return A, B and C, while the salesperson selects only one.
-
-## Architecture
-
-- `product.equivalent.group`: reusable equivalence group.
-- `product.template.equivalent_group_id`: links a product template to one group.
-- `product.product._name_search()`: preserves native Odoo search, then appends products from the matched product's equivalence group.
-- No JavaScript is required for the MVP.
-- Caller domains (`sale_ok`, company restrictions, etc.) are preserved when equivalents are appended.
-
-## Why a group instead of direct product-to-product links?
-
-A group avoids a combinatorial many-to-many relationship. With four equivalent products, each product only points to the group rather than maintaining A↔B, A↔C, B↔C, etc.
+Product Equivalents adds manually maintained, direct product-to-product relationships to product templates and includes directly related products in Odoo's standard Sales Order product search. The relationship is symmetric and non-transitive: A ↔ B and B ↔ C do not imply A ↔ C. Native matches and direct equivalents are ranked together by text relevance, with native matches winning ties. Caller domains and access rules are respected, and the salesperson chooses which product to add.
 
 ## Installation
 
-Copy `product_equivalent` into an Odoo addons path, update Apps List, then install **Product Equivalents**.
-
-CLI example:
+Place `product_equivalent` in an Odoo addons directory, update the Apps list, and install **Product Equivalents**.
 
 ```bash
 ./odoo-bin -d DATABASE -i product_equivalent --stop-after-init
 ```
 
-For upgrades:
+To upgrade an existing installation:
 
 ```bash
 ./odoo-bin -d DATABASE -u product_equivalent --stop-after-init
 ```
 
-## Standard Odoo 16 integration points
+## Compatibility
 
-The scaffold uses the standard Odoo 16 XML IDs `product.product_template_only_form_view` and `sale.prod_config_main`. They were checked against the upstream Odoo 16 source. If a vendor distribution replaces core views/menus, revalidate the inherited XML IDs rather than patching Odoo core.
-
-## MVP acceptance criteria
-
-1. Product A and Product B can be assigned to one equivalence group.
-2. Searching A's internal reference in a Sales Order returns A and B.
-3. Searching B's internal reference returns B and A.
-4. Unrelated products are not returned through equivalence expansion.
-5. `sale_ok=False` products are not introduced when the caller's domain excludes them.
-6. Multi-company domains passed by Sales remain respected.
-7. Existing Odoo native name/code/barcode search continues working.
-8. No optional product is automatically added to the order.
-
-## Known MVP choices
-
-- Equivalence is defined at **product template** level. All variants of templates in a group are treated as equivalent candidates. If variant-level equivalence is needed, make that a separate feature/version.
-- Native results appear first; equivalents are appended.
-- If native results already consume the requested autocomplete `limit`, the MVP does not force equivalents into the list. This protects native behavior and performance. A ranking strategy can be added later.
-
-## Suggested roadmap
-
-### 16.0.1.1.0
-- Dedicated aliases/cross-reference codes.
-- Search aliases without abusing `default_code`.
-
-### 16.0.1.2.0
-- Display stock and price context in a dedicated "Equivalent Products" chooser/action.
-- Configurable ordering (stock, sequence, brand, price).
-
-### 16.0.2.0.0
-- Optional variant-level equivalence.
-- Import wizard/API for cross-reference tables.
+This branch targets Odoo 17.0. See the corresponding version branch for other supported Odoo releases.
 
 ## License
 
-LGPL-3 in this scaffold. Review your distribution strategy before publishing or mixing code from external addons with different licenses.
+LGPL-3.
